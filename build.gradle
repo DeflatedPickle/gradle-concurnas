@@ -1,0 +1,20 @@
+import com.deflatedpickle.gradle.concurnas.Concurnas
+
+plugins {
+    id 'java-gradle-plugin'
+}
+
+gradlePlugin {
+    plugins {
+        concurnas {
+            id = "com.deflatedpickle.gradle.concurnas.concurnas"
+            implementationClass = "com.deflatedpickle.gradle.concurnas.Concurnas"
+        }
+    }
+}
+
+apply plugin: Concurnas
+
+conc {
+    compiler = 'H:\\Concurnas\\lib'
+}
