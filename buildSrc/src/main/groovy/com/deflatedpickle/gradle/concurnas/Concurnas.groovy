@@ -1,11 +1,30 @@
 package com.deflatedpickle.gradle.concurnas
 
+import org.codehaus.groovy.runtime.InvokerHelper
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.plugins.Convention
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
 
 class Concurnas implements Plugin<Project> {
     @Override
     void apply(Project project) {
+        project.pluginManager.apply(Concurnas.class);
+        ConcExtension extension = project.extensions.create(
+                "concurnas",
+                ConcExtension.class,
+                project,
+                project.fileResolver
+        )
+
+        project.properties.get("sourceSets").all { SourceSet sourceSet ->
+            def concSourceSet = extension.getSourceSetsContainer().maybeCreate(sourceSet.name)
+            concSourceSet.getConc().srcDir(project.file("src/" + sourceSet.name + "/concurnas"))
+
+            (InvokerHelper.getProperty(sourceSet, "convention") as Convention).plugins.put("concurnas", concSourceSet)
+        } as SourceSetContainer
+
         def source = project.extensions.create('conc', Source)
 
         def rootFile = new File('./')
@@ -38,10 +57,23 @@ class Concurnas implements Plugin<Project> {
 
         project.getTasks().create("compileConc", { task ->
             doLast {
-                new File(source.src).traverse {
-                    "java ${source.jArgs.join(' ')} -Dcom.concurnas.home=${source.compiler} -cp ${source.compiler}\\* com.concurnas.conc.ConcWrapper concc ${source.src} ${source.cArgs.join(' ')}".execute(
-                            [], rootFile
-                    ).waitForProcessOutput(new StringBuffer(), System.err)
+                (SourceSetContainer) project.properties.get("sourceSets").all { SourceSet sourceSet ->
+                    ConcSourceSet concSourceSet = project.extensions
+                            .getByType(ConcExtension.class)
+                            .sourceSetsContainer
+                            .maybeCreate(sourceSet.name)
+
+                    concSourceSet.conc.srcDirs.each {
+                        if (it.exists()) {
+                            it.absoluteFile.traverse { file ->
+                                new File("${project.buildDir}\\classes\\${it.name}\\${sourceSet.name}").mkdirs()
+
+                                "java ${source.jArgs.join(' ')} -Dcom.concurnas.home=${source.compiler} -cp ${source.compiler}\\* com.concurnas.conc.ConcWrapper concc -verbose ${source.cArgs.join(' ')} -d ${project.buildDir}\\classes\\${it.name}\\${sourceSet.name} ${file.name}".execute(
+                                        [], it.absoluteFile
+                                ).waitForProcessOutput(System.out, System.err)
+                            }
+                        }
+                    }
                 }
             }
         })
