@@ -44,5 +44,5 @@ pluginBundle {
 apply plugin: Concurnas
 
 conc {
-    compiler = 'H:\\Concurnas\\lib'
+    compiler = 'H:\\Concurnas'
 }
