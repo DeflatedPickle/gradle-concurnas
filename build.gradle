@@ -22,7 +22,7 @@ dependencies {
 gradlePlugin {
     plugins {
         concurnas {
-            id = "com.deflatedpickle.gradle.concurnas.Concurnas"
+            id = "com.deflatedpickle.gradle.concurnas"
             implementationClass = "com.deflatedpickle.gradle.concurnas.Concurnas"
         }
     }
@@ -44,5 +44,6 @@ pluginBundle {
 apply plugin: Concurnas
 
 conc {
-    compiler = 'H:\\Concurnas'
+    home = 'H:\\Concurnas'
+    conccArgs += '-verbose'
 }

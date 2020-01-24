@@ -31,37 +31,19 @@ class Concurnas implements Plugin<Project> {
         def source = project.extensions.create('conc', Source)
 
         def rootFile = new File('./')
-
-        /*
-        Exception in thread "main" java.lang.NullPointerException
-            at com.concurnas.runtimeCache.RuntimeCache.addEntry(RuntimeCache.java:77)
-            at com.concurnas.runtimeCache.RuntimeCache.createConcCoreJar(RuntimeCache.java:155)
-            at com.concurnas.runtimeCache.RuntimeCache.createConcCoreGo(RuntimeCache.java:127)
-            at com.concurnas.runtimeCache.RuntimeCache.doAgumentation(RuntimeCache.java:66)
-            at com.concurnas.runtimeCache.RuntimeCacheCreator.makeCache(RuntimeCacheCreator.java:19)
-            at com.concurnas.runtimeCache.RuntimeCacheCreator.main(RuntimeCacheCreator.java:48)
-         */
-        project.getTasks().create("concRuntimeCache", { task ->
-            doLast {
-                "java -cp ${source.compiler}\\lib\\* com.concurnas.runtimeCache.RuntimeCacheCreator".execute(
-                        [], rootFile
-                ).waitForProcessOutput(new StringBuffer(), System.err)
-            }
-        })
-
-        // Error: Could not find or load main class com.concurnas.build.LibCompilation
-        project.getTasks().create("concLibCompilation", { task ->
-            doLast {
-                "java -cp ${source.compiler}\\lib\\* com.concurnas.build.LibCompilation".execute(
-                        [], rootFile
-                ).waitForProcessOutput(new StringBuffer(), System.err)
-            }
-        })
+        def fileNameFinder = new FileNameFinder()
 
         // If Concurnas does not exist in this directory, install it
-        project.getTasks().create("concInstall", { task ->
+        def install = project.getTasks().create("concInstall", { task ->
+            onlyIf {
+                fileNameFinder.getFileNames(
+                        "${source.home}\\lib\\",
+                        'Concurnas-*.jar'
+                ).size() < 0
+            }
+
             doLast {
-                def compiler = new File("${source.compiler}\\lib")
+                def compiler = new File("${source.home}\\lib")
                 if (!compiler.listFiles().find { it.name.startsWith("Concurnas") && it.name.endsWith(".jar") }) {
                     compiler.mkdirs()
 
@@ -81,7 +63,7 @@ class Concurnas implements Plugin<Project> {
                                         it.browser_download_url.toURL().withInputStream { stream ->
                                             new ZipInputStream(stream).with { zippedStream ->
                                                 while(entry = zippedStream.nextEntry) {
-                                                    def local = new File("${source.compiler}\\${entry.name}")
+                                                    def local = new File("${source.home}\\${entry.name}")
 
                                                     if(entry.isDirectory()) {
                                                         local.mkdirs()
@@ -104,7 +86,50 @@ class Concurnas implements Plugin<Project> {
             }
         })
 
-        project.getTasks().create("compileConc", { task ->
+        /*
+        Exception in thread "main" java.lang.NullPointerException
+            at com.concurnas.runtimeCache.RuntimeCache.addEntry(RuntimeCache.java:77)
+            at com.concurnas.runtimeCache.RuntimeCache.createConcCoreJar(RuntimeCache.java:155)
+            at com.concurnas.runtimeCache.RuntimeCache.createConcCoreGo(RuntimeCache.java:127)
+            at com.concurnas.runtimeCache.RuntimeCache.doAgumentation(RuntimeCache.java:66)
+            at com.concurnas.runtimeCache.RuntimeCacheCreator.makeCache(RuntimeCacheCreator.java:19)
+            at com.concurnas.runtimeCache.RuntimeCacheCreator.main(RuntimeCacheCreator.java:48)
+         */
+        project.getTasks().create("concRuntimeCache", { task ->
+            dependsOn(install)
+
+            doLast {
+                "java -cp ${source.home}\\lib\\* com.concurnas.runtimeCache.RuntimeCacheCreator".execute(
+                        [], rootFile
+                ).waitForProcessOutput(new StringBuffer(), System.err)
+            }
+        })
+
+        // Error: Could not find or load main class com.concurnas.build.LibCompilation
+        project.getTasks().create("concLibCompilation", { task ->
+            dependsOn(install)
+
+            doLast {
+                "java -cp ${source.home}\\lib\\* com.concurnas.build.LibCompilation".execute(
+                        [], rootFile
+                ).waitForProcessOutput(new StringBuffer(), System.err)
+            }
+        })
+
+        // Always creates a dumb terminal with disabled input
+        project.getTasks().create("concRepl", { task ->
+            dependsOn(install)
+
+            doLast {
+                "java ${source.javaArgs.join(' ')} -Dcom.concurnas.home=${source.home}\\lib -cp ${source.home}\\lib\\* com.concurnas.conc.ConcWrapper conc ${source.replArgs.join(' ')}".execute(
+                        [], rootFile
+                ).waitForProcessOutput(System.out, System.err)
+            }
+        })
+
+        def compileMain = project.getTasks().create("compileConc", { task ->
+            dependsOn(install)
+
             doLast {
                 (SourceSetContainer) project.properties.get("sourceSets").all { SourceSet sourceSet ->
                     ConcSourceSet concSourceSet = project.extensions
@@ -117,7 +142,7 @@ class Concurnas implements Plugin<Project> {
                             it.absoluteFile.traverse { file ->
                                 new File("${project.buildDir}\\classes\\${it.name}\\${sourceSet.name}").mkdirs()
 
-                                "java ${source.jArgs.join(' ')} -Dcom.concurnas.home=${source.compiler}\\lib -cp ${source.compiler}\\lib\\* com.concurnas.conc.ConcWrapper concc -verbose ${source.cArgs.join(' ')} -d ${project.buildDir}\\classes\\${it.name}\\${sourceSet.name} ${file.name}".execute(
+                                "java ${source.javaArgs.join(' ')} -Dcom.concurnas.home=${source.home}\\lib -cp ${source.home}\\lib\\* com.concurnas.conc.ConcWrapper concc ${source.conccArgs.join(' ')} -d ${project.buildDir}\\classes\\${it.name}\\${sourceSet.name} ${file.name}".execute(
                                         [], it.absoluteFile
                                 ).waitForProcessOutput(System.out, System.err)
                             }
