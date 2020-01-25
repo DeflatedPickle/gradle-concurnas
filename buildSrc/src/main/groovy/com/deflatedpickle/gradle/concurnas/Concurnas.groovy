@@ -35,49 +35,67 @@ class Concurnas implements Plugin<Project> {
 
         // If Concurnas does not exist in this directory, install it
         def install = project.getTasks().create("concInstall", { task ->
-            onlyIf {
-                fileNameFinder.getFileNames(
-                        "${source.home}\\lib\\",
-                        'Concurnas-*.jar'
-                ).size() < 0
-            }
+            // onlyIf {
+            //     source.each {
+            //         fileNameFinder.getFileNames(
+            //                 "${source.home}\\${it}\\lib\\",
+            //                 'Concurnas-*.jar'
+            //         ).size() < 0
+            //     }
+            // }
 
             doLast {
-                def compiler = new File("${source.home}\\lib")
-                if (!compiler.listFiles().find { it.name.startsWith("Concurnas") && it.name.endsWith(".jar") }) {
-                    compiler.mkdirs()
+                source.versions.each { ver ->
+                    def compiler = new File("${source.home}\\${it}\\lib")
+                    if (!compiler.listFiles().find { it.name.startsWith("Concurnas") && it.name.endsWith(".jar") }) {
+                        compiler.mkdirs()
 
-                    def getResult = new URL('https://api.github.com/repos/Concurnas/Concurnas/releases').openConnection()
+                        def getResult = new URL('https://api.github.com/repos/Concurnas/Concurnas/releases').openConnection()
 
-                    if (getResult.getResponseCode().equals(200)) {
-                        def jsonText = getResult.getInputStream().getText()
-                        def jsonObj = new JsonSlurper().parseText(jsonText)
+                        if (getResult.getResponseCode().equals(200)) {
+                            def jsonText = getResult.getInputStream().getText()
+                            def jsonObj = new JsonSlurper().parseText(jsonText)
 
-                        def assets = jsonObj[0].assets
-                        assets.each {
-                            if (it.name.startsWith('Concurnas')) {
-                                // All releases so far have been ZIPs, but future ones may need other cases
-                                switch (it.content_type) {
-                                    case 'application/x-zip-compressed':
-                                        // Copies the files from the ZIP
-                                        it.browser_download_url.toURL().withInputStream { stream ->
-                                            new ZipInputStream(stream).with { zippedStream ->
-                                                while(entry = zippedStream.nextEntry) {
-                                                    def local = new File("${source.home}\\${entry.name}")
+                            def version
+                            if (ver == 'latest') {
+                                version = jsonObj[0]
+                            }
+                            else {
+                                def counter = 0
+                                jsonObj.each {
+                                    if (jsonObj[counter].name == ver) {
+                                        version = jsonObj[counter]
+                                    }
 
-                                                    if(entry.isDirectory()) {
-                                                        local.mkdirs()
+                                    counter++
+                                }
+                            }
+
+                            def assets = version.assets
+                            assets.each {
+                                if (it.name.startsWith('Concurnas')) {
+                                    // All releases so far have been ZIPs, but future ones may need other cases
+                                    switch (it.content_type) {
+                                        case 'application/x-zip-compressed':
+                                            // Copies the files from the ZIP
+                                            it.browser_download_url.toURL().withInputStream { stream ->
+                                                new ZipInputStream(stream).with { zippedStream ->
+                                                    while (entry = zippedStream.nextEntry) {
+                                                        def local = new File("${source.home}\\${version.name}\\${entry.name}")
+
+                                                        if (entry.isDirectory()) {
+                                                            local.mkdirs()
+                                                        } else {
+                                                            local.createNewFile()
+                                                            local << zippedStream
+                                                        }
+
+                                                        zippedStream.closeEntry()
                                                     }
-                                                    else {
-                                                        local.createNewFile()
-                                                        local << zippedStream
-                                                    }
-
-                                                    zippedStream.closeEntry()
                                                 }
                                             }
-                                        }
-                                        break
+                                            break
+                                    }
                                 }
                             }
                         }
@@ -142,9 +160,11 @@ class Concurnas implements Plugin<Project> {
                             it.absoluteFile.traverse { file ->
                                 new File("${project.buildDir}\\classes\\${it.name}\\${sourceSet.name}").mkdirs()
 
-                                "java ${source.javaArgs.join(' ')} -Dcom.concurnas.home=${source.home}\\lib -cp ${source.home}\\lib\\* com.concurnas.conc.ConcWrapper concc ${source.conccArgs.join(' ')} -d ${project.buildDir}\\classes\\${it.name}\\${sourceSet.name} ${file.name}".execute(
-                                        [], it.absoluteFile
-                                ).waitForProcessOutput(System.out, System.err)
+                                source.versions.each { ver ->
+                                    "java ${source.javaArgs.join(' ')} -Dcom.concurnas.home=${source.home}\\${ver}\\lib -cp ${source.home}\\${ver}\\lib\\* com.concurnas.conc.ConcWrapper concc ${source.conccArgs.join(' ')} -d ${project.buildDir}\\classes\\${it.name}\\${sourceSet.name} ${file.name}".execute(
+                                            [], it.absoluteFile
+                                    ).waitForProcessOutput(System.out, System.err)
+                                }
                             }
                         }
                     }

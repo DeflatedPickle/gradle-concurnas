@@ -46,4 +46,6 @@ apply plugin: Concurnas
 conc {
     home = 'H:\\Concurnas'
     conccArgs += '-verbose'
+
+    versions += '1.13.108'
 }

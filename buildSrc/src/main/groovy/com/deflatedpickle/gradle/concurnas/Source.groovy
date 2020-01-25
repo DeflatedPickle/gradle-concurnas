@@ -10,6 +10,8 @@ class Source {
     // The REPL arguments
     String[] replArgs = []
 
+    String[] versions = ["latest"]
+
     String getHome() {
         if (home == null) {
             // I think it should be uppercase, but it isn't in the docs
