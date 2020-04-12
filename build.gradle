@@ -1,11 +1,10 @@
-import com.deflatedpickle.gradle.concurnas.Concurnas
-
 plugins {
     id 'java'
     id 'groovy'
     id 'idea'
     id 'java-gradle-plugin'
-    id 'com.gradle.plugin-publish' version '0.10.1'
+    id 'com.gradle.plugin-publish' version '0.11.0'
+    id 'nu.studer.credentials' version '2.1'
 }
 
 repositories {
@@ -17,6 +16,7 @@ group = "com.deflatedpickle.gradle.concurnas"
 
 dependencies {
     compile gradleApi()
+    compile localGroovy()
 }
 
 gradlePlugin {
@@ -39,11 +39,4 @@ pluginBundle {
             displayName = 'gradle-concurnas'
         }
     }
-}
-
-apply plugin: Concurnas
-
-conc {
-    home = 'H:\\Concurnas'
-    conccArgs += '-verbose'
 }
