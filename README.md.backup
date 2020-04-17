@@ -17,9 +17,9 @@ A Gradle plugin for Concurnas.
 - [Tasks](#tasks)
 	- [CompileConc](#compileconc-task)
 	- [ConcInstall](#concinstall-task)
-	- [ConcRuntimeCache](#concruntimecache-task) ***BROKEN***
-	- [ConcLibCompilation](#conclibcompilation-task) ***BROKEN***
-	- [ConcRepl](#concrepl-task)
+	- [ConcRuntimeCache](#concruntimecache-task)
+	- [ConcLibCompilation](#conclibcompilation-task)
+	- [ConcRepl]()
 
 ## Installation
 Edit your plugins block to reference to this plugin by `id` and latest release version.

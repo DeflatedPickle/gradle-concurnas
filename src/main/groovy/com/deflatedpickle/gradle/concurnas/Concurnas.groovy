@@ -5,6 +5,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.Convention
+import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 
@@ -29,6 +30,9 @@ class Concurnas implements Plugin<Project> {
         } as SourceSetContainer
 
         def source = project.extensions.create('conc', Source)
+        def replExt = (source as ExtensionAware).extensions.create('repl', REPLSource)
+        def conccExt = (source as ExtensionAware).extensions.create("concc", ConccArgs)
+        def jvmExt = (source as ExtensionAware).extensions.create("jvm", JVMArgs)
 
         def rootFile = new File('./')
         def fileNameFinder = new FileNameFinder()
@@ -37,7 +41,7 @@ class Concurnas implements Plugin<Project> {
         def install = project.getTasks().create("concInstall", { task ->
             onlyIf {
                 fileNameFinder.getFileNames(
-                        "${source.home}\\lib\\",
+                        "${source.home}\\lib",
                         'Concurnas-*.jar'
                 ).size() < 0
             }
@@ -121,7 +125,7 @@ class Concurnas implements Plugin<Project> {
             dependsOn(install)
 
             doLast {
-                "java ${source.javaArgs.join(' ')} -Dcom.concurnas.home=${source.home}\\lib -cp ${source.home}\\lib\\* com.concurnas.conc.ConcWrapper conc ${source.replArgs.join(' ')}".execute(
+                "java ${jvmExt.args.join(' ')} -Dcom.concurnas.home=${source.home}\\lib -cp ${source.home}\\lib\\* com.concurnas.conc.ConcWrapper conc ${replExt.args.join(' ')}".execute(
                         [], rootFile
                 ).waitForProcessOutput(System.out, System.err)
             }
@@ -142,7 +146,7 @@ class Concurnas implements Plugin<Project> {
                             it.absoluteFile.traverse { file ->
                                 new File("${project.buildDir}\\classes\\${it.name}\\${sourceSet.name}").mkdirs()
 
-                                "java ${source.javaArgs.join(' ')} -Dcom.concurnas.home=${source.home}\\lib -cp ${source.home}\\lib\\* com.concurnas.conc.ConcWrapper concc ${source.conccArgs.join(' ')} -d ${project.buildDir}\\classes\\${it.name}\\${sourceSet.name} ${file.name}".execute(
+                                "java ${jvmExt.args.join(' ')} -Dcom.concurnas.home=${source.home}\\lib -cp ${source.home}\\lib\\* com.concurnas.conc.ConcWrapper concc ${conccExt.args.join(' ')} -d ${project.buildDir}\\classes\\${it.name}\\${sourceSet.name} ${file.name}".execute(
                                         [], it.absoluteFile
                                 ).waitForProcessOutput(System.out, System.err)
                             }
