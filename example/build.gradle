@@ -1,0 +1,8 @@
+plugins {
+    id "com.deflatedpickle.gradle.concurnas" version "0.0.2"
+}
+
+conc {
+    home = 'H:\\Concurnas'
+    concc.args += '-verbose'
+}

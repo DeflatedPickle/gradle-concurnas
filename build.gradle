@@ -1,42 +1,4 @@
 plugins {
-    id 'java'
-    id 'groovy'
     id 'idea'
-    id 'java-gradle-plugin'
-    id 'com.gradle.plugin-publish' version '0.11.0'
     id 'nu.studer.credentials' version '2.1'
-}
-
-repositories {
-    jcenter()
-}
-
-version = "0.0.2"
-group = "com.deflatedpickle.gradle.concurnas"
-
-dependencies {
-    compile gradleApi()
-    compile localGroovy()
-}
-
-gradlePlugin {
-    plugins {
-        concurnas {
-            id = "com.deflatedpickle.gradle.concurnas"
-            implementationClass = "com.deflatedpickle.gradle.concurnas.Concurnas"
-        }
-    }
-}
-
-pluginBundle {
-    website = 'https://github.com/DeflatedPickle/gradle-concurnas'
-    vcsUrl = 'https://github.com/DeflatedPickle/gradle-concurnas.git'
-    description = 'A Gradle plugin for Concurnas.'
-    tags = ['concurnas']
-
-    plugins {
-        concurnas {
-            displayName = 'gradle-concurnas'
-        }
-    }
 }
